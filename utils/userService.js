@@ -8,7 +8,8 @@ export async function createNewUser({ username, name, email, role, hashedPasswor
             email,         // Required
             password: hashedPassword, // Required
             role,          // Required
-            avatars: avatars.length > 0 ? { create: avatars.map(url => ({ url })) } : undefined, // Handle avatars
+            // avatars: avatars.length > 0 ? { create: avatars.map(url => ({ url })) } : undefined, // Handle avatars
+            avatars: avatars.length > 0 ? { create: avatars } : undefined,
         },
         include: {
             avatars: true

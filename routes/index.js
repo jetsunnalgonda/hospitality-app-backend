@@ -7,6 +7,8 @@ import scheduleRoutes from './scheduleRoutes.js';
 import urlRoutes from './urlRoutes.js';
 import refreshRoute from './refreshRoute.js';
 import profileRoutes from './profileRoutes.js';
+import adminRoleVerificationRoute from './adminRoleVerificationRoute.js';
+import verifyEmailRoute from './verifyEmailRoute.js';
 
 const router = Router();
 
@@ -17,5 +19,7 @@ router.use('/', scheduleRoutes);
 router.use('/', urlRoutes);
 router.use('/', refreshRoute);
 router.use('/', profileRoutes);
+router.use('/', adminRoleVerificationRoute);
+router.use('/', verifyEmailRoute);
 
 export default router;
