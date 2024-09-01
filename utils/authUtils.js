@@ -35,12 +35,12 @@ export const authenticateUser = async (email, password) => {
 
 // Generate access token
 export const generateAccessToken = (user) => {
-  return jwt.sign({ userId: user.id }, process.env.JWT_SECRET, { expiresIn: '15m' });
+  return jwt.sign({ id: user.id }, process.env.JWT_SECRET, { expiresIn: '1h' });
 };
 
 // Generate refresh token
 export const generateRefreshToken = (user) => {
-  return jwt.sign({ userId: user.id }, process.env.JWT_REFRESH_SECRET, { expiresIn: '7d' });
+  return jwt.sign({ id: user.id }, process.env.JWT_REFRESH_SECRET, { expiresIn: '7d' });
 };
 
 // Middleware to authenticate JWT token

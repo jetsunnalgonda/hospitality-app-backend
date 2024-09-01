@@ -8,7 +8,9 @@ const router = express.Router();
 // Login route
 router.post('/login', async (req, res) => {
     const { email, password } = req.body;
-    console.log(email, password);
+    console.log('routes/loginRoute.js');
+    console.log('Received email:', email);
+    console.log('Received password:', password);
     try {
         const user = await authenticateUser(email, password, prisma);
         console.log("user");
