@@ -35,7 +35,7 @@ export const authenticateUser = async (email, password) => {
 
 // Generate access token
 export const generateAccessToken = (user) => {
-  return jwt.sign({ id: user.id }, process.env.JWT_SECRET, { expiresIn: '1h' });
+  return jwt.sign({ id: user.id }, process.env.JWT_SECRET, { expiresIn: '15m' });
 };
 
 // Generate refresh token
@@ -44,7 +44,7 @@ export const generateRefreshToken = (user) => {
 };
 
 // Middleware to authenticate JWT token
-export const authenticateJWT = (req, res, next) => {
+export const authenticateJWT = async (req, res, next) => {
   const token = req.headers.authorization?.split(' ')[1];
   console.log('Authenticating, token:', token);
 
@@ -56,16 +56,41 @@ export const authenticateJWT = (req, res, next) => {
     } catch (error) {
       console.error('Token verification failed:', error.message);
 
-      if (error.name === 'TokenExpiredError') {
-        return res.status(401).json({ message: 'Token expired' });
+      console.log('error.name:', error.name);
+
+      // if (error.name === 'TokenExpiredError') {
+      if (error) {
+        // Token is expired; try to refresh it using the refresh token
+        const refreshToken = req.cookies?.refreshToken;
+        if (refreshToken) {
+          try {
+            const decoded = verifyRefreshToken(refreshToken); // Verify refresh token
+            const user = await prisma.user.findUnique({ where: { id: decoded.id } });
+            
+            if (user) {
+              const newAccessToken = generateAccessToken(user);
+              res.setHeader('Authorization', `Bearer ${newAccessToken}`);
+              req.user = user; // Attach user data to the request object
+              next(); // Proceed to the next middleware or route handler
+            } else {
+              res.status(403).json({ message: 'Forbidden: Invalid refresh token' });
+            }
+          } catch (refreshError) {
+            console.error('Refresh token verification failed:', refreshError.message);
+            res.status(403).json({ message: 'Forbidden: Invalid refresh token' });
+          }
+        } else {
+          res.status(401).json({ message: 'Unauthorized: No refresh token provided' });
+        }
       } else {
-        return res.status(403).json({ message: 'Forbidden: Invalid token' });
+        res.status(403).json({ message: 'Forbidden: Invalid token' });
       }
     }
   } else {
     res.status(401).json({ message: 'Unauthorized: No token provided' });
   }
 };
+
 
 export const verifyRefreshToken = (token) => {
   try {
