@@ -43,7 +43,7 @@ router.put('/profile', authenticateJWT, upload.array('avatars', 5), async (req, 
         const updateData = { name, bio, email, role };
 
         // If a new password is provided, hash it
-        if (password) {
+        if (!password && password !== undefined) {
             updateData.password = await hashPassword(password);
         }
 
