@@ -1,5 +1,5 @@
 import express from 'express';
-// import cors from 'cors';
+import cors from 'cors';
 import corsMiddleware from './cors.js';
 
 
@@ -12,6 +12,7 @@ const setupMiddleware = (app) => {
     });
 
     app.use(corsMiddleware);
+    app.use(cors());
 
     app.use((req, res, next) => {
         console.log('Response headers:', res.getHeaders());

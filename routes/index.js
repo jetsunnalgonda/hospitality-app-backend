@@ -9,6 +9,7 @@ import refreshRoute from './refreshRoute.js';
 import profileRoutes from './profileRoutes.js';
 import adminRoleVerificationRoute from './adminRoleVerificationRoute.js';
 import verifyEmailRoute from './verifyEmailRoute.js';
+import scriptsRoutes from './scriptsRoutes.js';
 
 const router = Router();
 
@@ -21,5 +22,6 @@ router.use('/', refreshRoute);
 router.use('/', profileRoutes);
 router.use('/', adminRoleVerificationRoute);
 router.use('/', verifyEmailRoute);
+router.use('/', scriptsRoutes)
 
 export default router;
