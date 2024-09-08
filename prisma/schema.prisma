@@ -5,19 +5,55 @@ datasource db {
 
 generator client {
   provider = "prisma-client-js"
-  previewFeatures = ["driverAdapters"]  
+  previewFeatures = ["driverAdapters"]
 }
 
 model User {
-  id        Int        @id @default(autoincrement())
-  username  String?    @unique
-  name      String
-  email     String     @unique
-  password  String
-  role      String
-  avatars   Avatar[]   // One-to-many relationship
-  scripts   Script[]   // One-to-many relationship
-  schedules Schedule[] // One-to-many relationship
+  id           Int          @id @default(autoincrement())
+  username     String?      @unique
+  name         String
+  email        String       @unique
+  password     String
+  role         String
+  avatars      Avatar[]     
+  scripts      Script[]     
+  schedules    Schedule[]   
+  conversations Conversation[]  @relation("UserConversations")
+  
+  messages     Message[]    @relation("MessageSender") // Sent messages
+  receivedMessages Message[] @relation("MessageSendee") // Received messages
+}
+
+
+model Conversation {
+  id           Int       @id @default(autoincrement())
+  participants User[]    @relation("UserConversations")
+  messages     Message[] // Relationship between Conversation and Message
+}
+
+model Message {
+  id              Int          @id @default(autoincrement())
+  text            String
+  timestamp       DateTime     @default(now())
+  status          String       // New field for message status
+  conversationId  Int          
+  conversation    Conversation @relation(fields: [conversationId], references: [id])
+  
+  userId          Int          // Sender's ID
+  user            User         @relation("MessageSender", fields: [userId], references: [id])
+  
+  sendeeId        Int          // Sendee's ID (New Field)
+  sendee          User         @relation("MessageSendee", fields: [sendeeId], references: [id])
+
+  @@index([conversationId, userId]) // Creating a compound index
+}
+
+
+model Avatar {
+  id        Int    @id @default(autoincrement())
+  url       String
+  userId    Int
+  user      User   @relation(fields: [userId], references: [id])
 }
 
 model Script {
@@ -39,11 +75,4 @@ model Schedule {
   user        User     @relation(fields: [userId], references: [id])
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
-}
-
-model Avatar {
-  id        Int    @id @default(autoincrement())
-  url       String
-  userId    Int
-  user      User   @relation(fields: [userId], references: [id])
 }

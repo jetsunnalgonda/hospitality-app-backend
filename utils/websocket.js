@@ -72,9 +72,9 @@ function handleUserAction(action, ws, data) {
 
 // Broadcast the message to the target user
 function broadcastMessage(actionType, ws, data) {
-  console.log(`[WebSocket Server] User ${ws.userId} performed ${actionType} on user with ID: ${data.userId}`);
+  console.log(`[WebSocket Server] User ${ws.userId} performed ${actionType} on user with ID: ${data.sendeeId}`);
 
-  broadcastMessageToUser(data.userId, {
+  broadcastMessageToUser(data.sendeeId, {
     action: 'message',
     data: {
       type: actionType,
@@ -83,7 +83,9 @@ function broadcastMessage(actionType, ws, data) {
       tempId: data.tempId,
       referenceId: data.referenceId,
       createdAt: data.createdAt,
-      message: 'broadcast message',
+      conversationId: data.conversationId,
+      text: data.text,
+      // message: 'broadcast message',
     },
   });
 }
@@ -98,8 +100,10 @@ function broadcastNotification(actionType, ws, data) {
       type: actionType,
       userId: ws.userId,
       userName: data.userName,
-      tempId: data.tempId,
-      referenceId: data.referenceId,
+      // tempId: data.tempId,
+      // referenceId: data.referenceId,
+      conversationId: data.conversationId,
+      text: data.text,
       createdAt: data.createdAt,
       message: 'broadcast notificaiton',
     },
