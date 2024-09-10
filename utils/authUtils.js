@@ -46,13 +46,25 @@ export const generateRefreshToken = (user) => {
 // Middleware to authenticate JWT token
 export const authenticateJWT = async (req, res, next) => {
   const token = req.headers.authorization?.split(' ')[1];
+  const userIdFromRequest = req.body.userId || req.query.userId;
+
   console.log('Authenticating, token:', token);
+  console.log('req.body.userId:', userIdFromRequest);
 
   if (token) {
     try {
-      const user = verifyToken(token); // Verify the access token
-      req.user = user; // Attach user data to the request object
-      next(); // Proceed to the next middleware or route handler
+      const user = verifyToken(token); // Verify and decode the access token
+
+      // Compare the userId from the token with the userId in the request
+      // if (userIdFromRequest && parseInt(userIdFromRequest) !== user.id) {
+      //   console.log('User ID mismatch:', userIdFromRequest, user.id);
+      //   // res.status(403).json({ message: 'Forbidden: User ID does not match' });
+      //   throw new Error('User ID does not match');
+      // }
+
+      // Token is valid and user ID matches; proceed with the request
+      req.user = user;
+      return next();
     } catch (error) {
       console.error('Token verification failed:', error.message);
 

@@ -29,7 +29,12 @@ router.post('/conversations', authenticateJWT, async (req, res) => {
         },
       },
       include: {
-        participants: true,  // Include participants in the response
+        // participants: true,  // Include participants in the response
+        participants: {
+          include: {
+            avatars: true, // Include the avatars related to each participant
+          },
+        },
         messages: true,      // Include messages in the response (will be empty if no messages are added)
       },
     });
@@ -67,7 +72,48 @@ router.post('/conversations', authenticateJWT, async (req, res) => {
   }
 });
 
+// Check existing conversations
+router.get('/conversations/check', authenticateJWT, async (req, res) => {
+  // const userId = req.user.id;
+  const { participantIds } = req.params;
 
+  if (!participantIds || participantIds.length !== 2) {
+    return res.status(400).json({ message: 'Invalid participant IDs' });
+  }
+
+  try {
+    // Check if a conversation exists with the exact two participants
+    const existingConversation = await prisma.conversation.findFirst({
+      where: {
+        AND: [
+          {
+            participants: {
+              some: { id: participantIds[0] } // Check if participant 1 exists
+            }
+          },
+          {
+            participants: {
+              some: { id: participantIds[1] } // Check if participant 2 exists
+            }
+          }
+        ]
+      },
+      include: {
+        participants: true
+      }
+    });
+
+    if (existingConversation) {
+      return res.status(200).json({ conversation: existingConversation });
+    }
+
+    // If no conversation is found, return null
+    return res.status(200).json({ conversation: null });
+  } catch (error) {
+    console.error('Error checking conversation:', error);
+    return res.status(500).json({ message: 'Internal server error' });
+  }
+});
 
 // Send a message
 router.post('/conversations/:id/messages', authenticateJWT, async (req, res) => {
@@ -109,9 +155,17 @@ router.get('/conversations/:id/messages', authenticateJWT, async (req, res) => {
 });
 
 // Get conversations for a user
-router.get('/conversations', authenticateJWT, async (req, res) => {
+router.post('/usersConversations', authenticateJWT, async (req, res) => {
+  console.log('/usersConversations with req.user.id ' + req.user.id);
+  console.log("Incoming POST /usersConversations request body:", req.body);
+  const { userId } = req.body;
+
   // const userId = parseInt(req.query.userId); // Ensure you pass userId as a query parameter
-  const userId = req.user.id;
+  // const userId = req.user.id;
+  // const { userId } = req.params;
+  // const userId = parseInt(req.params.userId);
+  console.log('userId from req.body: ' + userId)
+
 
   try {
     if (!userId) {
@@ -127,17 +181,97 @@ router.get('/conversations', authenticateJWT, async (req, res) => {
         }
       },
       include: {
-        participants: true, // Include participants if needed
+        // participants: true, // Include participants if needed
+        participants: {
+          include: {
+            avatars: true, // Include the avatars related to each participant
+          },
+        },
         messages: {
           take: 1, // Optionally include the latest message for preview
           orderBy: {
             timestamp: 'desc'
+          },
+          include: {
+            readReceipts: true
           }
         }
       }
     });
 
-    res.json(conversations);
+    const conversationsWithUnreadCounts = conversations.map(conversation => {
+      const unreadCount = conversation.messages.filter(
+        message => !message.readReceipts.some(receipt => receipt.userId === userId)
+      ).length;
+  
+      return {
+        ...conversation,
+        unreadCount,
+      };
+    });
+
+    // res.json(conversations);
+    res.status(200).json(conversationsWithUnreadCounts);
+  } catch (error) {
+    res.status(400).json({ error: error.message });
+  }
+});
+
+// Get conversations for a user
+router.get('/conversations', authenticateJWT, async (req, res) => {
+  console.log('getting conversations for the user with id ' + req.user.id);
+  // const userId = parseInt(req.query.userId); // Ensure you pass userId as a query parameter
+  // const userId = req.user.id;
+  // const { userId } = req.params;
+  const userId = parseInt(req.params.userId);
+  console.log('userId = ' + userId)
+
+
+  try {
+    if (!userId) {
+      return res.status(400).json({ error: 'User ID is required' });
+    }
+
+    const conversations = await prisma.conversation.findMany({
+      where: {
+        participants: {
+          some: {
+            id: userId
+          }
+        }
+      },
+      include: {
+        // participants: true, // Include participants if needed
+        participants: {
+          include: {
+            avatars: true, // Include the avatars related to each participant
+          },
+        },
+        messages: {
+          take: 1, // Optionally include the latest message for preview
+          orderBy: {
+            timestamp: 'desc'
+          },
+          include: {
+            readReceipts: true
+          }
+        }
+      }
+    });
+
+    const conversationsWithUnreadCounts = conversations.map(conversation => {
+      const unreadCount = conversation.messages.filter(
+        message => !message.readReceipts.some(receipt => receipt.userId === userId)
+      ).length;
+  
+      return {
+        ...conversation,
+        unreadCount,
+      };
+    });
+
+    // res.json(conversations);
+    res.status(200).json(conversationsWithUnreadCounts);
   } catch (error) {
     res.status(400).json({ error: error.message });
   }
@@ -232,6 +366,36 @@ router.post('/messages', authenticateJWT, async (req, res) => {
     res.status(400).json({ error: error.message });
   }
 });
+
+// Mark messages as read for the current user
+router.post('/messages/read', authenticateJWT, async (req, res) => {
+  const { userId, messageIds } = req.body; // Array of message IDs that were read
+
+  try {
+    // For each message, create a read receipt if it doesn't already exist
+    const readReceipts = await Promise.all(
+      messageIds.map(async (messageId) => {
+        return prisma.readReceipt.upsert({
+          where: {
+            // Composite unique key to ensure uniqueness
+            messageId_userId: { messageId, userId },
+          },
+          update: {}, // If it exists, do nothing
+          create: {
+            messageId,
+            userId,
+          },
+        });
+      })
+    );
+
+    res.status(200).json({ success: true, readReceipts });
+  } catch (error) {
+    console.error('Error marking messages as read:', error);
+    res.status(500).json({ success: false, error: 'Internal Server Error' });
+  }
+});
+
 
 
 export default router;
